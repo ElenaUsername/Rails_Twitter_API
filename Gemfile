@@ -49,4 +49,9 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
 
   gem 'graphql'
+  gem 'nokogiri'
+
+  group :development do
+    gem "graphiql-rails"
+  end
 end
