@@ -50,6 +50,7 @@ group :development, :test do
 
   gem 'graphql'
   gem 'nokogiri'
+  gem "rspec-rails"
 
   group :development do
     gem "graphiql-rails"
