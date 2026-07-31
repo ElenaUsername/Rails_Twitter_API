@@ -10,11 +10,25 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_29_192012) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_31_120000) do
+  create_table "resource_descriptions", force: :cascade do |t|
+    t.integer "byte_size"
+    t.datetime "created_at", null: false
+    t.text "description", null: false
+    t.string "image_url"
+    t.string "title", null: false
+    t.integer "tweet_id", null: false
+    t.datetime "updated_at", null: false
+    t.string "url", null: false
+    t.index ["tweet_id"], name: "index_resource_descriptions_on_tweet_id"
+  end
+
   create_table "tweets", force: :cascade do |t|
     t.text "content"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "uuid"
   end
+
+  add_foreign_key "resource_descriptions", "tweets"
 end
