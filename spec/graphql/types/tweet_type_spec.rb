@@ -7,13 +7,15 @@ RSpec.describe Types::TweetType do
     expect(tweet_type.graphql_name).to eq("Tweet")
   end
 
-  it "verify the expected fields existance uuid" do
+  it "verify the expected fields existance uuid and resources" do
     expect(tweet_type.fields.keys).to contain_exactly(
       "uuid",
+      "resources"
     )
   end
 
-  it "verify the uuid is not null" do
+  it "verify the uuid is not null resources" do
     expect(tweet_type.fields["uuid"].type.non_null?).to be(true)
+    expect(tweet_type.fields["resources"].type.non_null?).to be(true)
   end
 end
