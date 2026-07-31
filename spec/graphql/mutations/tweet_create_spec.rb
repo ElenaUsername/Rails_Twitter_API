@@ -36,4 +36,3 @@ RSpec.describe 'TweetCreate mutation', type: :request do
     expect(json['data']['tweetCreate']['tweet']['uuid']).to be_present
   end
 end
-
