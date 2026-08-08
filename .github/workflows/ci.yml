@@ -71,9 +71,19 @@ jobs:
         with:
           bundler-cache: true
 
+      # - name: Run tests
+      #   env:
+      #     RAILS_ENV: test
+      #     # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+      #     # REDIS_URL: redis://localhost:6379/0
+      #   run: bin/rails db:test:prepare test
+
+      - name: Prepare test database
+        env:
+          RAILS_ENV: test
+        run: bin/rails db:test:prepare
+
       - name: Run tests
         env:
           RAILS_ENV: test
-          # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
-          # REDIS_URL: redis://localhost:6379/0
-        run: bin/rails db:test:prepare test
+        run: bundle exec rspec

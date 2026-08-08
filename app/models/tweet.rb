@@ -5,6 +5,10 @@ class Tweet < ApplicationRecord
 
   alias_attribute :message, :content
 
+  def resources
+    resource_descriptions
+  end
+
   before_create :generate_uuid
 
   private
