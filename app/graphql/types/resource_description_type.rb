@@ -1,6 +1,6 @@
 module Types
   class ResourceDescriptionType < Types::BaseObject
-    graphql_name 'ResourceDescription'
+    graphql_name "ResourceDescription"
 
     field :title, String, null: false
     field :description, String, null: false

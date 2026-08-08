@@ -27,7 +27,7 @@ module Types
     # def test_field
     #   "Hello World!"
     # end
-    field :tweets, [Types::TweetType], null: false
+    field :tweets, [ Types::TweetType ], null: false
 
     def tweets
       Tweet.all
