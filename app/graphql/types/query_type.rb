@@ -30,7 +30,10 @@ module Types
     field :tweets, [ Types::TweetType ], null: false
 
     def tweets
-      Tweet.all
+      Tweet.includes(
+        { resource_descriptions: :image },
+        comments: { resource_descriptions: :image }
+      )
     end
   end
 end
