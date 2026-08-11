@@ -6,7 +6,7 @@ module Mutations
 
     def resolve(content:)
       tweet = Tweet.create!(content: content)
-      OpenGraphExtractionJob.perform_later(tweet.id)
+      OpenGraphExtractionJob.perform_later(tweet)
       { tweet: tweet }
     end
   end

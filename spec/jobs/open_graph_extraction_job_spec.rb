@@ -23,7 +23,7 @@ RSpec.describe OpenGraphExtractionJob, type: :job do
     end
 
     it 'creates a resource_description with the extracted data' do
-      expect { described_class.perform_now(tweet.id) }
+      expect { described_class.perform_now(tweet) }
         .to change(tweet.resource_descriptions, :count).by(1)
 
       resource = tweet.resource_descriptions.last
@@ -48,7 +48,7 @@ RSpec.describe OpenGraphExtractionJob, type: :job do
     end
 
     it 'creates one resource_description per URL' do
-      expect { described_class.perform_now(tweet.id) }
+      expect { described_class.perform_now(tweet) }
         .to change(tweet.resource_descriptions, :count).by(2)
     end
   end
@@ -57,7 +57,7 @@ RSpec.describe OpenGraphExtractionJob, type: :job do
     let(:content) { 'just plain text, no links here' }
 
     it 'does not create any resource_description' do
-      expect { described_class.perform_now(tweet.id) }
+      expect { described_class.perform_now(tweet) }
         .not_to change(ResourceDescription, :count)
     end
   end
@@ -70,7 +70,7 @@ RSpec.describe OpenGraphExtractionJob, type: :job do
     end
 
     it 'skips creating a resource_description' do
-      expect { described_class.perform_now(tweet.id) }
+      expect { described_class.perform_now(tweet) }
         .not_to change(ResourceDescription, :count)
     end
   end
@@ -85,7 +85,7 @@ RSpec.describe OpenGraphExtractionJob, type: :job do
     end
 
     it 'still creates the resource_description with a nil image and byte_size' do
-      described_class.perform_now(tweet.id)
+      described_class.perform_now(tweet)
 
       resource = tweet.resource_descriptions.last
       expect(resource.title).to eq('No Image')
@@ -102,7 +102,7 @@ RSpec.describe OpenGraphExtractionJob, type: :job do
     end
 
     it 'skips it without raising' do
-      expect { described_class.perform_now(tweet.id) }
+      expect { described_class.perform_now(tweet) }
         .not_to change(ResourceDescription, :count)
     end
   end
@@ -115,7 +115,7 @@ RSpec.describe OpenGraphExtractionJob, type: :job do
     end
 
     it 'rescues the error, skips the URL, and does not raise' do
-      expect { described_class.perform_now(tweet.id) }.not_to raise_error
+      expect { described_class.perform_now(tweet) }.not_to raise_error
       expect(tweet.resource_descriptions.count).to eq(0)
     end
   end
@@ -132,11 +132,41 @@ RSpec.describe OpenGraphExtractionJob, type: :job do
     end
 
     it 'still creates the resource_description with a nil byte_size' do
-      described_class.perform_now(tweet.id)
+      described_class.perform_now(tweet)
 
       resource = tweet.resource_descriptions.last
       expect(resource.title).to eq('Bad Image')
       expect(resource.byte_size).to be_nil
+    end
+  end
+
+  context 'when the record is a Comment' do
+    let(:content) { 'parent tweet' }
+    let(:comment) { tweet.comments.create!(content: 'nice ladder https://example.com/article') }
+
+    before do
+      stub_page('https://example.com/article', og: {
+        'og:title' => 'Cool Article',
+        'og:description' => 'A description',
+        'og:url' => 'https://example.com/article',
+        'og:image' => 'https://example.com/image.png'
+      })
+      stub_request(:head, 'https://example.com/image.png')
+        .to_return(headers: { 'Content-Length' => '12345' })
+    end
+
+    it 'extracts the resources against the comment, not the tweet' do
+      expect { described_class.perform_now(comment) }
+        .to change(comment.resource_descriptions, :count).by(1)
+
+      resource = comment.resource_descriptions.last
+      expect(resource.title).to eq('Cool Article')
+      expect(resource.description).to eq('A description')
+      expect(resource.url).to eq('https://example.com/article')
+      expect(resource.image_url).to eq('https://example.com/image.png')
+      expect(resource.byte_size).to eq(12_345)
+
+      expect(tweet.resource_descriptions).to be_empty
     end
   end
 end
