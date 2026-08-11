@@ -46,6 +46,30 @@ project's development environment, for tweets either.
 
 **Verdict:** accepted
 
+## Entry 3
+
+> fix the solid_queue tables so jobs run in development
+
+**Response:** Gave development its own queue database, mirroring the production layout: a
+`queue` entry under `development:` in `config/database.yml` plus
+`config.solid_queue.connects_to` in `config/environments/development.rb`, then
+`bin/rails db:prepare` to load `db/queue_schema.rb` into it. Two config lines changed, no
+migration and no Gemfile change.
+
+The alternative — loading the queue schema into the primary development database — was
+rejected because the next `bin/rails db:migrate` would have dumped all eleven `solid_queue_*`
+tables into the tracked `db/schema.rb`. Confirmed after the fix that `db/schema.rb` and
+`db/queue_schema.rb` are both unchanged.
+
+Verified end to end with `bin/rails server` and `bin/jobs` running: `tweetCreate` and
+`commentCreate` over HTTP, both jobs claimed by the worker within two seconds, real Open Graph
+metadata stored for the tweet and the comment, `2 jobs / 2 finished / 0 failed` in the queue
+database. This one had no RSpec red half — the specs run under the `:test` queue adapter and
+never touch solid_queue, so the failure only existed in the development environment and the
+proof had to be the running app.
+
+**Verdict:** accepted
+
 ## Reflection
 
 > **Draft — for review.** This is Claude's own read of the session; the judgements below are
@@ -90,4 +114,6 @@ anything. Worth watching for in review.
 Second, and more seriously: the whole feature could have been declared done on `44 examples,
 0 failures` while `perform_later` was in fact raising in the development environment. The
 specs pass because the test queue adapter never runs a job. Only driving the real app surfaced
-the missing `solid_queue` tables. A green suite said nothing about it.
+the missing `solid_queue` tables. A green suite said nothing about it, and no reachable test
+would have — which is the strongest argument in this session for the rule that a feature is not
+done until it has been driven in the running app. That gap was closed in Entry 3.
