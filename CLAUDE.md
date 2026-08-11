@@ -43,3 +43,22 @@ project.
 
 Commit conventions — granularity, message format, and the RuboCop check that must pass
 before every commit — live in `.claude/rules/feature-development.md`.
+
+## Prompt logging
+
+- `PROMPTS.md` lives at the repo root,
+- After every prompt/response exchange (planning, implementation, fixes, review),
+  append an entry to `PROMPTS.md` — do this immediately, without being asked:
+  ## Entry N
+
+  > <the prompt, verbatim>
+
+  **Response:** <1-2 sentence summary of what came back>
+
+  **Verdict:** accepted / rejected / re-prompted
+- When the feature is complete, add a closing `## Reflection` section covering:
+  which prompt did the most work, where manual correction was needed, what
+  rule should be added here to avoid repeating that correction, and anything
+  that was nearly merged despite being wrong. Draft this section, but flag it
+  as a draft for the user to review and finalize — it should reflect the
+  user's judgment, not just Claude's self-assessment.
