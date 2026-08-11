@@ -109,6 +109,6 @@ Example Return:
   ]
 }
 General Considerations
-Reuse, don't duplicate. You already scan URLs and extract Open Graph metadata for tweets. 
-
+Reuse, don't duplicate. You already scan URLs and extract Open Graph metadata for tweets. The interesting part of this exercise is getting Claude to find that code and reuse it for comments. It will happily write you a second copy instead — catch that in review.
 Watch your queries. tweets now loads comments and their resources too. Have a look at how many queries that fires for a handful of tweets, each with a handful of comments.
+Hint: the Open Graph scraping pattern is in ../04-training-api/examples/nokogiri_example.rb.
