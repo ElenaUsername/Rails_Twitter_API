@@ -17,6 +17,14 @@ describe Comment do
     expect(first.uuid).not_to eq(second.uuid)
   end
 
+  it 'rejects a duplicate UUID at the database level' do
+    first = tweet.comments.create!(content: 'First comment')
+    second = tweet.comments.create!(content: 'Second comment')
+
+    expect { second.update!(uuid: first.uuid) }
+      .to raise_error(ActiveRecord::RecordNotUnique)
+  end
+
   it 'exposes content as message' do
     comment = tweet.comments.create!(content: 'Nice ladder')
 

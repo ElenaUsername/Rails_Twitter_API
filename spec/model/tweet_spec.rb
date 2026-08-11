@@ -16,6 +16,14 @@ describe 'Callback for before_create:generate_uuid' do
     expect(tweet_first.uuid).not_to be(tweet_second.uuid)
   end
 
+  it 'rejects a duplicate UUID at the database level' do
+    first = Tweet.create!(content: 'First tweet')
+    second = Tweet.create!(content: 'Second tweet')
+
+    expect { second.update!(uuid: first.uuid) }
+      .to raise_error(ActiveRecord::RecordNotUnique)
+  end
+
   it 'has one resource_description' do
     tweet = Tweet.create!(content: 'There is one link')
 
