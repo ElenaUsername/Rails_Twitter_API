@@ -46,9 +46,13 @@ RSpec.describe 'CommentCreate mutation', type: :request do
     end
 
     it 'enqueues the Open Graph extraction for the comment' do
+      # The block form is evaluated when the matcher runs, not when it is built.
+      # Passing Comment.last directly would pass nil, which rspec-rails treats
+      # as "no argument expectation" and skips.
       expect do
         post '/graphql', params: { query: query, variables: variables }, as: :json
-      end.to have_enqueued_job(OpenGraphExtractionJob).with(Comment.last)
+      end.to have_enqueued_job(OpenGraphExtractionJob)
+        .with { |record| expect(record).to eq(Comment.last) }
     end
   end
 
