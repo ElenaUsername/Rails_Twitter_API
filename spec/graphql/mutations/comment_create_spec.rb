@@ -56,6 +56,31 @@ RSpec.describe 'CommentCreate mutation', type: :request do
     end
   end
 
+  context 'when the content is blank' do
+    let(:tweet) { Tweet.create!(content: 'Best thing I found in a while: https://12ft.io/') }
+    let(:tweet_uuid) { tweet.uuid }
+    let(:comment_content) { '' }
+
+    it 'returns a GraphQL error rather than an HTTP error page' do
+      expect do
+        post '/graphql', params: { query: query, variables: variables }, as: :json
+      end.not_to change(Comment, :count)
+
+      expect(response).to have_http_status(200)
+
+      json = JSON.parse(response.body)
+      expect(json['errors'].first['message']).to eq("Content can't be blank")
+      expect(json['errors'].first['path']).to eq([ 'commentCreate' ])
+      expect(json['data']).to eq('commentCreate' => nil)
+    end
+
+    it 'does not enqueue an Open Graph extraction' do
+      expect do
+        post '/graphql', params: { query: query, variables: variables }, as: :json
+      end.not_to have_enqueued_job(OpenGraphExtractionJob)
+    end
+  end
+
   context 'when the tweetUuid does not exist' do
     let(:tweet_uuid) { '1231-1231-1231-1231' }
 

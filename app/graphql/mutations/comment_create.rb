@@ -12,6 +12,8 @@ module Mutations
       comment = tweet.comments.create!(content: content)
       OpenGraphExtractionJob.perform_later(comment)
       { comment: comment }
+    rescue ActiveRecord::RecordInvalid => e
+      raise GraphQL::ExecutionError, e.record.errors.full_messages.to_sentence
     end
   end
 end
