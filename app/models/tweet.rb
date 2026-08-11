@@ -1,7 +1,7 @@
 class Tweet < ApplicationRecord
   validates :content, presence: true
 
-  has_many :resource_descriptions, dependent: :destroy
+  has_many :resource_descriptions, as: :resourceable, dependent: :destroy
 
   alias_attribute :message, :content
 

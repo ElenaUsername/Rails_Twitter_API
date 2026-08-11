@@ -1,5 +1,5 @@
 class ResourceDescription < ApplicationRecord
-  belongs_to :tweet
+  belongs_to :resourceable, polymorphic: true
   belongs_to :image
 
   validates :title, :description, :url, presence: true
