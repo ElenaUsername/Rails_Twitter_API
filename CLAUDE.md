@@ -22,6 +22,22 @@ anything**. Do not guess at a fix, and do not try several speculative changes to
 one sticks. Identify the actual cause from the output, then make the single change that
 addresses it.
 
+## Definition of done
+
+A green suite is not sufficient evidence that a feature works. Before reporting a feature
+complete, drive it in the running app and record the **actual** output — not the output you
+expected.
+
+This matters most where the test environment substitutes a different adapter than development
+or production uses. The `:test` queue adapter never runs a job, so no RSpec example can prove
+that `perform_later` works; only starting the app and a worker can.
+
+## Refactoring in service of reuse
+
+When reuse requires modifying existing working code, refactor only behind a green suite, and
+commit the refactor separately from the feature that motivated it. Run the full suite before
+and after — the existing specs are the safety net that makes the change cheap.
+
 ## Scope
 
 Follow the provided requirements strictly. Do not guess at intent, and do not add extra
