@@ -5,5 +5,6 @@ module Types
     field :uuid, ID, null: false
     field :message, String, null: false
     field :resources, [ Types::ResourceDescriptionType ], null: false
+    field :comments, [ Types::CommentType ], null: false
   end
 end
