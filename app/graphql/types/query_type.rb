@@ -27,13 +27,34 @@ module Types
     # def test_field
     #   "Hello World!"
     # end
-    field :tweets, [ Types::TweetType ], null: false
+    field :tweets, [ Types::TweetType ], null: false, extras: [ :lookahead ]
 
-    def tweets
-      Tweet.includes(
-        { resource_descriptions: :image },
-        comments: { resource_descriptions: :image }
-      )
+    def tweets(lookahead:)
+      preloads = preloads_for(lookahead)
+      return Tweet.all if preloads.empty?
+
+      Tweet.includes(*preloads)
+    end
+
+    private
+
+    # Preload only what the query actually selects. Preloading unconditionally
+    # would cost a client asking for `tweets { uuid message }` five extra
+    # queries for comments, resources and images it never requested.
+    def preloads_for(lookahead)
+      preloads = []
+      preloads << { resource_descriptions: :image } if lookahead.selects?(:resources)
+
+      if lookahead.selects?(:comments)
+        comments = lookahead.selection(:comments)
+        preloads << if comments.selects?(:resources)
+          { comments: { resource_descriptions: :image } }
+        else
+          :comments
+        end
+      end
+
+      preloads
     end
   end
 end

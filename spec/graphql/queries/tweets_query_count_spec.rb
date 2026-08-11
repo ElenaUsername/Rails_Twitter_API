@@ -92,4 +92,37 @@ RSpec.describe 'tweets query database load', type: :request do
       #{queries.map.with_index(1) { |sql, i| "  #{i}. #{sql}" }.join("\n")}
     MESSAGE
   end
+
+  it 'preloads nothing for a query that selects no associations' do
+    queries = collect_queries do
+      post '/graphql', params: { query: 'query { tweets { uuid message } }' }, as: :json
+    end
+
+    json = JSON.parse(response.body)
+    expect(json['errors']).to be_nil
+    expect(json['data']['tweets'].length).to eq(3)
+
+    # Only the tweets themselves. Eager loading unconditionally would preload
+    # comments, resources and images the client never asked for.
+    expect(queries.length).to eq(1), <<~MESSAGE
+      Expected 1 query, got #{queries.length}:
+      #{queries.map.with_index(1) { |sql, i| "  #{i}. #{sql}" }.join("\n")}
+    MESSAGE
+  end
+
+  it 'preloads resources but not comments when only resources are selected' do
+    shallow = 'query { tweets { uuid resources { title image { url } } } }'
+
+    queries = collect_queries do
+      post '/graphql', params: { query: shallow }, as: :json
+    end
+
+    expect(JSON.parse(response.body)['errors']).to be_nil
+
+    # Tweets, their resource_descriptions, those images. No comments query.
+    expect(queries.length).to eq(3), <<~MESSAGE
+      Expected 3 queries, got #{queries.length}:
+      #{queries.map.with_index(1) { |sql, i| "  #{i}. #{sql}" }.join("\n")}
+    MESSAGE
+  end
 end
