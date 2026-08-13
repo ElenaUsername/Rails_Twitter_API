@@ -98,6 +98,85 @@ so the choice was put again rather than guessed at.
 
 **Verdict:** accepted
 
+## Entry 6
+
+> scan_ruby job failed. The pr was created based on all the commits from branch
+
+**Response:** Not brakeman — that reported zero warnings. `bundler-audit` failed on `json`
+2.21.1, CVE-2026-71847, fixed in 2.21.2. Established first that this was not a regression from
+the PR: `Gemfile` and `Gemfile.lock` are byte-identical to `main` across every commit on the
+branch, and `json` is transitive (only rubocop constrains it, at `~> 2.3`). The advisory
+database picked the CVE up on 2026-08-10, so `main` fails the same check.
+
+`gh` was not installed at this point, so the job was reproduced locally rather than read from
+the CI logs. Because `CLAUDE.md` requires explicit permission for dependency changes, the fix
+was put as a question rather than applied; the answer was to bump it on this branch.
+`bundle update json --conservative` changed exactly one gem line plus its checksum, with
+`Gemfile` untouched. All four CI checks then passed locally.
+
+**Verdict:** accepted
+
+## Entry 7
+
+> /code-review --comment
+
+**Response:** The review could not post — no `gh`, no GitHub MCP tool — so it returned five
+findings as text. Each was verified rather than taken on trust, which mattered: two of its
+details were wrong. Blank content returns HTTP **422**, not the 500 it claimed, and the shallow
+query cost **4** extra queries, not 5.
+
+Its first finding was real and was my bug, already pushed:
+`have_enqueued_job(...).with(Comment.last)` proved nothing, because Ruby evaluates the matcher
+argument before the `expect` block runs, so `Comment.last` was `nil` and rspec-rails skips a nil
+argument list. Confirmed by printing it at matcher-build time, then fixed with the block form
+and proved by sabotage — enqueueing the tweet instead of the comment now fails the example.
+
+Three further fixes were chosen: a unique index on both uuid columns (duplicate uuids were
+accepted, and `find_by(uuid:)` was scanning), `RecordInvalid` rescued into a
+`GraphQL::ExecutionError` in both mutations, and lookahead-driven preloading so a shallow query
+costs one query again instead of five. A fourth problem surfaced while doing them, caused by my
+own earlier change: making development multi-database meant `db:migrate` re-dumped
+`db/queue_schema.rb` in the 8.1 dumper format on every run, so that file was committed once in
+its regenerated form and verified stable. Suite went 44 → 51 examples. Verified in the running
+app at 1, 3 and 6 queries for the shallow, resources-only and fully nested queries.
+
+**Verdict:** accepted
+
+## Entry 8
+
+> /code-review --comment
+
+**Response:** `gh` was present this time (`/usr/bin/gh`), and the review posted three inline
+comments on PR #6 — confirmed by fetching them back rather than trusting the report.
+
+One of the three does not survive checking. The claim was that on a checkout where the queue
+database has not been schema-loaded, `bin/rails db:migrate` dumps an empty database over
+`db/queue_schema.rb` and wipes every Solid Queue table definition. Tested both variants — queue
+database deleted outright, and queue database present but zero bytes — and the file came through
+unchanged at 141 lines and 11 tables in both. Rails does not dump a schema for a database it did
+not migrate. The review had been candid that it only confirmed "the dump-on-migrate half",
+which is the *primary* database, and that behaviour was already known and handled in `e7ee503`.
+
+The other two stand and were deliberately left open. The job signature is not backward
+compatible across a deploy with a non-empty queue — true, but this project has never deployed
+and the shim would be dead code the day it lands. And `tweets` is unpaginated with no
+`max_depth` or `max_complexity` on the schema — true, unchanged by this PR, and not in the
+week 8 requirements. Nothing was committed this round.
+
+**Verdict:** accepted
+
+## Entry 9
+
+> check PROMPTS.md, there are some entries missing. Add them, update the reflectiontto cover
+> this work too. After that ask before and commiting and commit after getting my aproval
+
+**Response:** Added Entries 6 to 9 — the `scan_ruby` failure and both code-review rounds had
+gone unlogged, which is itself a miss against the logging rule. Extended the reflection to cover
+the review rounds, and corrected its "nearly merged" section: the vacuous assertion was not
+nearly merged, it was committed and pushed. Approval requested before committing, as asked.
+
+**Verdict:** accepted
+
 ## Reflection
 
 Reviewed and accepted. Both rules proposed below were added to `CLAUDE.md`.
@@ -111,6 +190,12 @@ looks like the idiomatic way to signal a missing record and actually yields a 40
 no `errors` array at all; and `includes(:resources)` looks right but raises
 `AssociationNotFoundError` because `resources` is a plain method, not an association. The
 implementation prompt then had almost nothing left to decide.
+
+That said, the two `/code-review` prompts earned their place. Between them they produced the
+unique index, the graceful validation errors, the conditional preloading and — most valuable —
+the vacuous assertion that planning could never have caught, because it was introduced after the
+plan was written. Planning front-loaded the design decisions; review caught the execution slips.
+Neither substitutes for the other.
 
 **Where manual correction was needed.** Very little, but three judgement calls were escalated
 rather than assumed, and all three were the user's to make: whether to extract a shared concern
@@ -135,7 +220,15 @@ said nothing about what to do when reuse requires *modifying* existing working c
 wrong with them. That was the right move, and it was cheap only because 27 green specs made it
 safe, so the rule records that precondition and the separate-commit habit that goes with it.
 
-**What was nearly merged despite being wrong.** Two things.
+A third rule is worth considering but has **not** been added, since it was not asked for: prove
+an assertion by breaking the code it guards. The vacuous `.with(Comment.last)` would have been
+caught the moment it was written by sabotaging `perform_later` and watching the example stay
+green. That is a heavier habit than the existing red/green rule — it asks for a second,
+deliberate falsification of every value-level assertion — so it is recorded here as a candidate
+rather than slipped into the working agreements.
+
+**What was merged or nearly merged despite being wrong.** Three things, in ascending order of
+how badly they reflect on the process.
 
 First, `spec/graphql/types/mutation_type_spec.rb` and `tweet_type_spec.rb` assert `fields.keys`
 with `contain_exactly`, so both broke the moment `commentCreate` and `comments` were
@@ -144,9 +237,36 @@ failure would look like collateral damage to be silenced, and updating an exact-
 assertion to match whatever the code now does is exactly how a type spec stops testing
 anything. Worth watching for in review.
 
-Second, and more seriously: the whole feature could have been declared done on `44 examples,
-0 failures` while `perform_later` was in fact raising in the development environment. The
-specs pass because the test queue adapter never runs a job. Only driving the real app surfaced
-the missing `solid_queue` tables. A green suite said nothing about it, and no reachable test
-would have — which is the strongest argument in this session for the rule that a feature is not
-done until it has been driven in the running app. That gap was closed in Entry 3.
+Second: the whole feature could have been declared done on `44 examples, 0 failures` while
+`perform_later` was in fact raising in the development environment. The specs pass because the
+test queue adapter never runs a job. Only driving the real app surfaced the missing
+`solid_queue` tables. A green suite said nothing about it, and no reachable test would have.
+That gap was closed in Entry 3.
+
+Third, and worst, because this one was not *nearly* merged — it was committed, pushed, and sat
+on the branch for two rounds:
+`have_enqueued_job(OpenGraphExtractionJob).with(Comment.last)` asserted nothing. `Comment.last`
+is `nil` when the matcher is built, and rspec-rails silently skips the argument check for a nil
+argument list, so the example passed no matter which record the job was enqueued for. It was
+written in the same session as a reflection paragraph warning about assertions that quietly stop
+testing anything, and it took an external review to catch it. The lesson is narrow and
+practical: a spec that has never failed for the reason it claims to test has not been proven to
+work. The fix was verified by sabotage — break the production code, watch the example go red —
+and that step should be routine for any assertion about *which* value was passed, not just that
+something happened.
+
+**On the code reviews.** Two rounds, and the pattern in both was the same: the review found
+things worth fixing and also asserted things that were not true. Round one got the blank-content
+status code wrong (422, not 500) and the shallow-query cost wrong (4 extra, not 5). Round two
+claimed `db:migrate` would wipe `db/queue_schema.rb` on a fresh checkout, which does not
+reproduce in either variant tested. Every finding that led to a code change was reproduced first;
+the one that did not reproduce led to no change. That is the right ratio, and it is worth saying
+plainly that a review — human or otherwise — is evidence to check, not an instruction to follow.
+
+**What my own fixes broke.** Worth recording separately, because it is the failure mode that
+scope discipline does not protect against. Giving development its own queue database (Entry 3)
+was a correct fix that silently created a new problem: `db:migrate` began re-dumping
+`db/queue_schema.rb` on every run. Nobody caught that at the time — not me, not the first
+review. It surfaced two rounds later only because an unrelated migration made the churn visible
+in `git status`. A fix landing cleanly and its consequences landing cleanly are different
+claims, and only the first one gets verified by default.
