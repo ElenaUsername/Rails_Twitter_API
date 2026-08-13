@@ -231,6 +231,34 @@ policy rather than a correction of this failure, so it was left as the user's ca
 
 **Verdict:** accepted
 
+## Entry 12
+
+> push it
+
+**Response:** Pushed `fa9a649..301e516`, then watched the run instead of calling it done on the
+local pass — which is the only reason this was caught. `scan_ruby` went red again. The brakeman
+step did turn green, so the Entry 11 fix was correct; it had simply been *masking* the next step.
+The workflow shell is `bash -e`, so the job aborted at brakeman and `bundler-audit` never ran at
+all. Fixing the first failure unmasked the second.
+
+The second is a genuinely new advisory: sqlite3 2.9.5, GHSA-mwm8-39rw-8826, a use-after-free in
+SQLite aggregate arguments, fixed in 2.9.6. My Entry 11 claim that "all four CI steps passed
+locally" was wrong about `bundler-audit` — the local `ruby-advisory-db` was stale, so it reported
+"No vulnerabilities found" against an advisory set that predated this one. `bundler-audit update`
+pulled 1231 advisories dated 2026-08-13 and the failure reproduced immediately.
+
+`Gemfile` already declares `sqlite3, ">= 2.1"`, so the bump is lockfile-only: 12 lines, being the
+six platform variants times version and checksum. `main` pins 2.9.5 as well, so this is not a
+regression from the branch either. Re-ran the suite specifically because a native extension moved
+underneath it — 51 examples, 0 failures, on gem 2.9.6 / libsqlite 3.53.2.
+
+The lesson is narrower than "verify locally": a green local security scan is only as current as
+its advisory database, and unlike a test suite it silently reports success when its data is
+stale. Sequential CI steps also hide each other, so one fix landing green does not mean the job
+will.
+
+**Verdict:** accepted
+
 ## Reflection
 
 Reviewed and accepted. Both rules proposed below were added to `CLAUDE.md`.
