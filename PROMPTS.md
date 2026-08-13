@@ -1,5 +1,13 @@
 # Prompts
 
+## Entry 0
+
+> Session was interrupted by a computer reset the changes remained and where commited but the prompt was lost
+
+**Response:** Created CLAUDE.md and feature-development.md.
+
+**Verdict:** accepted
+
 ## Entry 1
 
 > /plan I need you to analyse the existing project and to plan how to add the new feature that
