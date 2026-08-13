@@ -1,19 +1,5 @@
 class Tweet < ApplicationRecord
-  validates :content, presence: true
+  include ScannableContent
 
-  has_many :resource_descriptions, dependent: :destroy
-
-  alias_attribute :message, :content
-
-  def resources
-    resource_descriptions
-  end
-
-  before_create :generate_uuid
-
-  private
-
-  def generate_uuid
-    self.uuid = SecureRandom.uuid
-  end
+  has_many :comments, dependent: :destroy
 end
