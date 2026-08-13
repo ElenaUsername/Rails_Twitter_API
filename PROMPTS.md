@@ -205,6 +205,32 @@ describing the unconditional `includes` that review round one replaced.
 
 **Verdict:** accepted
 
+## Entry 11
+
+> scan ruby failed, investigate, corect it and commit
+
+**Response:** Brakeman this time — the opposite of Entry 6, where the job name pointed at brakeman
+and the culprit was `bundler-audit`. Read the failing run (31728834566) rather than guessing:
+exit code 5, and the only line of output was `Brakeman 8.0.5 is not the latest version 8.0.6`.
+Zero security warnings, zero errors.
+
+Exit 5 is Brakeman's "not latest" code, and it fires because `bin/brakeman` is a binstub that
+does `ARGV.unshift("--ensure-latest")` before loading the real executable. So the job is wired to
+fail whenever the lock is even one patch behind the newest published gem, independently of the
+code being scanned. Confirmed by running both forms locally: `bin/brakeman` exits 5,
+`bundle exec brakeman` exits 0 with `No warnings found`.
+
+Not a regression from this PR: `main` pins brakeman at 8.0.5 too, byte-identically, so it fails
+the same check. `bundle update brakeman --conservative` moved exactly one gem line plus its
+checksum with `Gemfile` untouched, and all four CI steps then passed locally.
+
+Flagged rather than acted on: this fix is a treadmill. `--ensure-latest` couples the build to
+brakeman's release cadence, so the same red returns on the next release with nothing wrong in the
+repo. Dropping the flag from the binstub would fix it permanently, but that is a change to CI
+policy rather than a correction of this failure, so it was left as the user's call.
+
+**Verdict:** accepted
+
 ## Reflection
 
 Reviewed and accepted. Both rules proposed below were added to `CLAUDE.md`.
