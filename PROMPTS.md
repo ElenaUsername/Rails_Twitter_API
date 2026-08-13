@@ -121,9 +121,10 @@ was put as a question rather than applied; the answer was to bump it on this bra
 > /code-review --comment
 
 **Response:** The review could not post — no `gh`, no GitHub MCP tool — so it returned five
-findings as text. Each was verified rather than taken on trust, which mattered: two of its
-details were wrong. Blank content returns HTTP **422**, not the 500 it claimed, and the shallow
-query cost **4** extra queries, not 5.
+findings as text. Each was verified rather than taken on trust, which mattered for one of them:
+blank content returns HTTP **422**, not the 500 it claimed. A second correction claimed here —
+that the shallow query cost 4 extra queries rather than the 5 the review said — was itself wrong,
+and is corrected in Entry 10.
 
 Its first finding was real and was my bug, already pushed:
 `have_enqueued_job(...).with(Comment.last)` proved nothing, because Ruby evaluates the matcher
@@ -134,7 +135,7 @@ and proved by sabotage — enqueueing the tweet instead of the comment now fails
 Three further fixes were chosen: a unique index on both uuid columns (duplicate uuids were
 accepted, and `find_by(uuid:)` was scanning), `RecordInvalid` rescued into a
 `GraphQL::ExecutionError` in both mutations, and lookahead-driven preloading so a shallow query
-costs one query again instead of five. A fourth problem surfaced while doing them, caused by my
+costs one query again instead of six. A fourth problem surfaced while doing them, caused by my
 own earlier change: making development multi-database meant `db:migrate` re-dumped
 `db/queue_schema.rb` in the 8.1 dumper format on every run, so that file was committed once in
 its regenerated form and verified stable. Suite went 44 → 51 examples. Verified in the running
@@ -174,6 +175,33 @@ week 8 requirements. Nothing was committed this round.
 gone unlogged, which is itself a miss against the logging rule. Extended the reflection to cover
 the review rounds, and corrected its "nearly merged" section: the vacuous assertion was not
 nearly merged, it was committed and pushed. Approval requested before committing, as asked.
+
+**Verdict:** accepted
+
+## Entry 10
+
+> Do a final pass over the whole PR — code, PROMPTS.md, and CLAUDE.md — and check for anything
+> still wrong or inconsistent: unresolved review comments, missing prompt entries, a reflection
+> that doesn't match what actually happened, dead code, or anything you're unsure about. Fix what
+> you find, or flag it for me if it's a judgement call.
+
+**Response:** The code came out clean — 51 examples green, RuboCop clean, no dead code added by
+this PR, and the `CommentCreateInput` the requirements ask for is really in the schema (relay
+auto-generates it, so no hand-written input type was needed). Two claims that the log asserted
+without re-deriving were checked and one of them was false: an unconditionally-preloaded
+`tweets { uuid message }` fires **6** queries, not 5, so round one's "5 extra" was right and
+Entry 7's correction of it was wrong. Fixed in Entry 7 and in the reflection, which had repeated
+it as evidence that the reviewer was unreliable. The 422 correction re-checked out
+(`ActiveRecord::RecordInvalid` maps to `UNPROCESSABLE_CONTENT` in the Active Record railtie).
+
+Also verified, because the migration's own comment makes a rollback-safety claim that no spec
+covers: rolled `MakeResourceDescriptionsPolymorphic` back with data on both sides of the
+polymorphic association and migrated up again. It reverts cleanly, drops the comment-owned rows
+as its `DELETE` intends, and returns `db/schema.rb` byte-identical to the committed version.
+
+Four things left as judgement calls rather than changed: the PR title, three still-open inline
+comments on PR #6, the pre-existing dead `TweetCreateInputType`, and `plan_week_8.md` step 9
+describing the unconditional `includes` that review round one replaced.
 
 **Verdict:** accepted
 
@@ -257,11 +285,21 @@ something happened.
 
 **On the code reviews.** Two rounds, and the pattern in both was the same: the review found
 things worth fixing and also asserted things that were not true. Round one got the blank-content
-status code wrong (422, not 500) and the shallow-query cost wrong (4 extra, not 5). Round two
-claimed `db:migrate` would wipe `db/queue_schema.rb` on a fresh checkout, which does not
-reproduce in either variant tested. Every finding that led to a code change was reproduced first;
-the one that did not reproduce led to no change. That is the right ratio, and it is worth saying
-plainly that a review — human or otherwise — is evidence to check, not an instruction to follow.
+status code wrong (422, not 500). Round two claimed `db:migrate` would wipe `db/queue_schema.rb`
+on a fresh checkout, which does not reproduce in either variant tested. Every finding that led to
+a code change was reproduced first; the one that did not reproduce led to no change. That is the
+right ratio, and it is worth saying plainly that a review — human or otherwise — is evidence to
+check, not an instruction to follow.
+
+But the same sentence has to be turned around, because the final pass found the mirror image of
+it. Round one also said an unconditionally-preloaded shallow query cost 5 extra queries; Entry 7
+"corrected" that to 4 and wrote the correction into the log. Re-measured directly — by patching
+the resolver back to the unconditional `includes` and running the shallow query — it is 6 queries
+total, 5 extra, exactly as the review said. The number was never re-derived, and it contradicted
+the code comment sitting three lines from it in `query_type.rb`, which had said "five extra
+queries" all along. So: a review is evidence to check, and so is a correction to a review. The
+habit that fails here is not trusting the reviewer too much, it is trusting the rebuttal too much
+because it is mine.
 
 **What my own fixes broke.** Worth recording separately, because it is the failure mode that
 scope discipline does not protect against. Giving development its own queue database (Entry 3)
