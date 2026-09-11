@@ -11,7 +11,8 @@ RSpec.describe Types::TweetType do
     expect(tweet_type.fields.keys).to contain_exactly(
       "uuid",
       "message",
-      "resources"
+      "resources",
+      "comments"
     )
   end
 
@@ -19,5 +20,6 @@ RSpec.describe Types::TweetType do
     expect(tweet_type.fields["uuid"].type.non_null?).to be(true)
     expect(tweet_type.fields["message"].type.non_null?).to be(true)
     expect(tweet_type.fields["resources"].type.non_null?).to be(true)
+    expect(tweet_type.fields["comments"].type.non_null?).to be(true)
   end
 end

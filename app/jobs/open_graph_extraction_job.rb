@@ -3,14 +3,12 @@ class OpenGraphExtractionJob < ApplicationJob
 
   URL_REGEX = %r{https?://\S+}
 
-  def perform(tweet_id)
-    tweet = Tweet.find(tweet_id)
-
-    urls(tweet.content).each do |url|
+  def perform(record)
+    urls(record.content).each do |url|
       data = extract_from(url)
       next unless data && data[:title] && data[:description] && data[:url]
 
-      tweet.resource_descriptions.create!(
+      record.resource_descriptions.create!(
         title: data[:title],
         description: data[:description],
         url: data[:url],

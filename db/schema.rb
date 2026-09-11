@@ -10,7 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_01_121425) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_11_094833) do
+  create_table "comments", force: :cascade do |t|
+    t.text "content"
+    t.datetime "created_at", null: false
+    t.integer "tweet_id", null: false
+    t.datetime "updated_at", null: false
+    t.string "uuid"
+    t.index ["tweet_id"], name: "index_comments_on_tweet_id"
+    t.index ["uuid"], name: "index_comments_on_uuid", unique: true
+  end
+
   create_table "images", force: :cascade do |t|
     t.integer "byte_size"
     t.datetime "created_at", null: false
@@ -22,12 +32,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_121425) do
     t.datetime "created_at", null: false
     t.text "description", null: false
     t.integer "image_id", null: false
+    t.integer "resourceable_id", null: false
+    t.string "resourceable_type", null: false
     t.string "title", null: false
-    t.integer "tweet_id", null: false
     t.datetime "updated_at", null: false
     t.string "url", null: false
     t.index ["image_id"], name: "index_resource_descriptions_on_image_id"
-    t.index ["tweet_id"], name: "index_resource_descriptions_on_tweet_id"
+    t.index ["resourceable_type", "resourceable_id"], name: "index_resource_descriptions_on_resourceable"
   end
 
   create_table "tweets", force: :cascade do |t|
@@ -35,8 +46,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_121425) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "uuid"
+    t.index ["uuid"], name: "index_tweets_on_uuid", unique: true
   end
 
+  add_foreign_key "comments", "tweets"
   add_foreign_key "resource_descriptions", "images"
-  add_foreign_key "resource_descriptions", "tweets"
 end
